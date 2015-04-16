@@ -1,0 +1,555 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN" dir="ltr"><head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>深入了解android平台的jni---本地多线程调用java代码 - android jni thread jvm - mobile - ITeye论坛</title>
+    <meta name="description" content="一、jni调用java对象 &nbsp;&nbsp;&nbsp; JNI提供的功能之一是在本地代码中使用Java对象。包括：创建一个java类对象和通过函数传递一个java对象。创建一个java类对象，� ...">
+    <meta name="keywords" content="android jni thread jvm mobile">
+    <link rel="shortcut icon" href="http://www.iteye.com/images/favicon.ico" type="image/x-icon">
+    <link href="http://www.iteye.com/rss/board/mobile" rel="alternate" title="ITeye论坛" type="application/rss+xml">
+    <link rel="search" type="application/opensearchdescription+xml" href="http://www.iteye.com/open_search.xml" title="ITeye">
+    <link href="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/forum.css" media="screen" rel="stylesheet" type="text/css">
+    <script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/ga.js" async="" type="text/javascript"></script><script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/application.js" type="text/javascript"></script>
+    <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-535605-1']);
+  _gaq.push(['_setDomainName', 'iteye.com']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+
+      <link href="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/SyntaxHighlighter.css" media="screen" rel="stylesheet" type="text/css">
+  <script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/shCoreCommon.js" type="text/javascript"></script>
+<script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/hotkey.js" type="text/javascript"></script>
+  <script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/code_favorites.js" type="text/javascript"></script>
+          <script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/dragdrop.js" type="text/javascript"></script>
+          <script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/osd.js" type="text/javascript"></script></head>
+  <body>
+    <div id="page">
+      <div id="header">
+        <div class="clearfix"><div id="user_nav">
+  
+        <a href="http://rainbow954.iteye.com/" title="查看我的博客首页" class="welcome">欢迎rainbow954</a>
+    <a title="没有未读消息" class="" id="notifications_count" href="http://my.iteye.com/notifications">0</a>
+    
+      <a href="http://my.iteye.com/messages" title="发送站内短信">收件箱</a>
+    
+    <a href="http://my.iteye.com/" title="我的应用首页">我的应用</a>
+    <div class="quick_menu" style="display:none;">
+      <a href="http://my.iteye.com/feed" title="我关注的好友动态消息">我的关注</a>
+      <a href="http://my.iteye.com/mygroup" title="我加入的群组最新话题">我的群组</a>
+      <a href="http://my.iteye.com/myresume" title="我的个人简历">我的简历</a>
+      <a href="http://my.iteye.com/admin/album" title="我的个人简历">我的相册</a>
+      <a href="http://my.iteye.com/admin/link" title="我收藏的网络资源链接">我的收藏</a>
+      <a href="http://my.iteye.com/admin/code" title="我收藏的代码">我的代码</a>
+      <a href="http://my.iteye.com/admin/weibo" title="用微博发表简短的话题">我的微博</a>
+    </div>
+    <a href="http://rainbow954.iteye.com/admin" title="管理我的博客">我的博客</a>
+    <a href="http://my.iteye.com/profile" title="修改我的个人设置">设置</a>
+    <a href="http://www.iteye.com/logout" class="nobg" onclick="var f = document.createElement('form'); f.style.display = 'none'; this.parentNode.appendChild(f); f.method = 'POST'; f.action = this.href;var m = document.createElement('input'); m.setAttribute('type', 'hidden'); m.setAttribute('name', '_method'); m.setAttribute('value', 'put'); f.appendChild(m);var s = document.createElement('input'); s.setAttribute('type', 'hidden'); s.setAttribute('name', 'authenticity_token'); s.setAttribute('value', '6LBnfgtCT4QAivyyl5VjdJ5t4Tj0q+zA8a+MYcdWHd0='); f.appendChild(s);f.submit();return false;">退出</a>
+  </div>
+</div>
+        <div class="clearfix">
+          <div id="branding">
+            <a href="http://www.iteye.com/"><img alt="ITeye-最棒的软件开发交流社区" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/logo.gif" title="ITeye-最棒的软件开发交流社区"></a>
+          </div>
+          <div id="gg"><iframe src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/942.html" scrolling="no" frameborder="0" height="90" width="728"></iframe></div>
+        </div>
+      </div>
+
+      <div id="content" class="clearfix">
+        <div id="main">
+          
+
+
+
+          
+
+<div class="h-entry" style="display:none">
+  <a href="http://staratsky.iteye.com/" class="p-author" target="_blank">mfcai</a>
+</div>
+
+
+<div class="clearfix">
+  <div class="crumbs">
+    <a href="http://www.iteye.com/forums">论坛首页</a> <span class="arrow">→</span>
+    <a href="http://www.iteye.com/forums/board/mobile">移动开发技术论坛</a> <span class="arrow">→</span>
+    <h1>深入了解android平台的jni---本地多线程调用java代码</h1>
+  </div>
+</div>
+
+
+  <div id="forum_tag_list">
+    <a href="http://www.iteye.com/forums/board/mobile">全部</a>
+          <a href="http://www.iteye.com/forums/tag/Android">Android</a>
+          <a href="http://www.iteye.com/forums/tag/iOS">iOS</a>
+          <a href="http://www.iteye.com/forums/tag/wp7">wp7</a>
+              <a href="http://www.iteye.com/forums/tag/J2ME">J2ME</a>
+          <a href="http://www.iteye.com/forums/tag/%E7%A7%BB%E5%8A%A8%E7%BB%BC%E5%90%88">移动综合</a>
+          <a href="http://www.iteye.com/forums/tag/Symbian">Symbian</a>
+          <a href="http://www.iteye.com/forums/tag/BlackBerry">BlackBerry</a>
+          <a href="http://www.iteye.com/forums/tag/WAP">WAP</a>
+      </div>
+
+
+<div class="actions">
+  <div class="buttons"></div>
+  <div class="wrapper">
+    <div id="forum_recommended_f4"><!--AdForward Begin:-->
+<script ads-tid="c6761edd_0" ads-outputs="0" id="allyes_ins_c8fd5b4c" type="text/javascript" ads-src="http://csdnim.allyes.com/main/s?user=iteye|forums|banner3&amp;db=csdnim&amp;border=0&amp;local=yes&amp;js=ie" src="942_data/AllyesDeliver.js" charset="gbk"></script><div id="c6761edd_0" style="padding:0;margin:0;border:0;"><script type="text/javascript" data-belong="allyes" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/s.js"></script><script type="text/javascript">
+/*ITeye论坛频道帖子列表页置顶banner728*90，创建于2014-7-3*/
+var cpro_id = "u1617754";
+</script>
+<script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/c.js" type="text/javascript"></script><div id="BAIDU_DUP_wrapper_u1617754_0"><iframe id="cproIframe_u1617754_1" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/acom.html" marginwidth="0" marginheight="0" scrolling="no" allowtransparency="true" frameborder="0" height="90" width="728" align="center,center"></iframe></div><script charset="utf-8" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/acom"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script></div>
+<!--AdForward End--></div>
+    
+    <div class="info">浏览 1382 次</div>
+  </div>
+</div>
+
+
+
+<table id="forum_main" cellspacing="1">
+  <thead>
+    <tr>
+      <th colspan="2" class="topic_title">
+        <div class="wrapper"><span class="locked">锁定老帖子</span> <a href="http://www.iteye.com/topic/1131337">主题：深入了解android平台的jni---本地多线程调用java代码</a></div>
+        <div id="topic_rate_box">精华帖 (0) :: 良好帖 (0) :: 新手帖 (0) :: 隐藏帖 (0)</div>
+      </th>
+    </tr>
+    <tr>
+      <td class="first_col">作者</td>
+      <td class="last_col">正文
+      
+      </td>
+    </tr>
+  </thead>
+  <tbody id="posts">
+    <tr id="2398134">
+  <td class="postauthor">
+    <ul>
+      <li class="name">mfcai</li>
+      <li>等级: <img src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/star5.gif" alt="五星会员" title="五星会员"></li>
+      <li><a href="http://staratsky.iteye.com/" target="_blank"><img alt="mfcai的博客" class="logo" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/user-logo.gif" title="mfcai的博客: 流星的博客" width=""></a></li>
+      <li>性别: <img src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/icon_minigender_1.gif" title="男"></li>      <li>文章: 106</li>
+      <li>积分: 770</li>
+      <li>来自: 北京</li>
+      <li><img src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/offline.gif"></li>
+    </ul>
+  </td>
+  <td class="postcontent">
+    <div class="postactions">
+      <div class="description">
+        &nbsp;&nbsp;
+        发表时间：2013-07-17&nbsp;&nbsp;
+        
+      </div>
+      <div class="links">
+        
+        
+          
+          
+            <a href="http://www.iteye.com/admin/link?user_favorite%5Btitle%5D=%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81&amp;user_favorite%5Burl%5D=http%3A%2F%2Fwww.iteye.com%2Ftopic%2F1131337" target="_blank" class="favorite" onclick="$$('.favorite_form_spinner')[0].show();new Ajax.Request('/admin/link/new_xhr?user_favorite%5Btitle%5D=%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81&amp;user_favorite%5Burl%5D=http%3A%2F%2Fwww.iteye.com%2Ftopic%2F1131337', {method: 'get', onSuccess: function(response){$(document.getElementsByTagName('body')[0]).insert({bottom:response.responseText});$$('.favorite_form_spinner')[0].hide();}});return false;">收藏</a><img alt="Spinner" class="favorite_form_spinner" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/spinner.gif" style="vertical-align:bottom;margin-left:7px;display:none;">
+          
+        
+      </div>
+    </div>
+    <div class="postbody clearfix">
+      
+        
+              <script type="text/javascript">
+      var hunters = ["\u003Ca href='/jobs/2508' target='_blank' style='color:#000;'\u003E\u003Cspan style='font-weight:bold;'\u003E\u4e0a\u6d77: \u003C/span\u003E Senior Software Engineer\u003C/a\u003E","\u003Ca href='/jobs/2509' target='_blank' style='color:#000;'\u003E\u003Cspan style='font-weight:bold;'\u003E\u4e0a\u6d77: \u003C/span\u003E Junior Product Manager\u003C/a\u003E"]
+      var hunter_id = Math.ceil(Math.random() * hunters.length) - 1;
+      if(hunter_id == -1) hunter_id = 0;
+    </script>
+    <div id="hunter_recommended" style="background: none repeat scroll 0% 0% rgb(255, 255, 255); border: 1px solid rgb(204, 204, 204); padding: 4px; margin-bottom: 10px; float: left; width: 557px;">
+      <span id="hunters_nav" style="margin-right:5px;">
+        <a href="#" onclick="hunter_id <= 0 ? hunter_id = hunters.length - 1 : hunter_id--; $('hunters').update(hunters[hunter_id]);return false;" style="border:1px solid #ccc;padding: 0 3px;size: 13px;text-decoration: none;">&lt;</a>
+        <a href="#" onclick="hunter_id >= hunters.length - 1 ? hunter_id = 0 : hunter_id++; $('hunters').update(hunters[hunter_id]);return false;" style="border:1px solid #ccc;padding: 0 3px;size :13px;text-decoration: none;">&gt;</a>
+      </span>
+      猎头职位: <span id="hunters"><a href="http://www.iteye.com/jobs/2508" target="_blank" style="color:#000;"><span style="font-weight:bold;">上海: </span> Senior Software Engineer</a></span>
+      <script type="text/javascript">$('hunters').update(hunters[hunter_id]);</script>
+    </div>
+
+        
+      
+                                            <div style="position: relative;" id="related_topics">相关文章: <span class="close"><a href="#" onclick="$('related_topics').hide();if($('hunter_recommended')){$('hunter_recommended').style.width='780px'};if($('topic_tags')){$('topic_tags').style.width='790px'};return false;" title="关闭">&nbsp;</a></span>
+              <ul>
+                                  <li><a href="http://www.iteye.com/topic/295776" title="Java JNI 编程进阶" target="_blank">Java JNI 编程进阶</a></li>
+                                  <li><a href="http://www.iteye.com/topic/1126667" title="关于ANDROID NATIVE 的No implementation found for native问题" target="_blank">关于ANDROID NATIVE 的No implementation found for native问题</a></li>
+                                  <li><a href="http://www.iteye.com/topic/1122354" title="使用c通过jni调用java" target="_blank">使用c通过jni调用java</a></li>
+                              </ul>
+              <br><span>推荐群组: <a href="http://hllvm.group.iteye.com/" target="_blank">高级语言虚拟机</a></span>
+              <br><a href="http://www.iteye.com/wiki/topic/1131337" target="_blank">更多相关推荐</a>
+            </div>
+            <script type="text/javascript">
+              document.observe("dom:loaded", function() {
+                if($('hunter_recommended')) {
+                  $('hunter_recommended').setStyle({cssFloat: 'left', width: '557px'})
+                }
+                if($('topic_tags')) {
+                  $('topic_tags').setStyle({width: '567px'})
+                }
+                new Draggable("related_topics");
+              });
+            </script>
+                          
+          <div style="width: 567px;" id="topic_tags" class="news_tag">
+                          <a href="http://www.iteye.com/forums/tag/android%20jni%20thread%20jvm">android jni thread jvm</a>
+                      </div>
+        
+      
+      一、jni调用java对象
+<br>&nbsp;&nbsp;&nbsp; 
+JNI提供的功能之一是在本地代码中使用Java对象。包括：创建一个java类对象和通过函数传递一个java对象。创建一个java类对象，首先需要
+得到得到使用FindClass/GetObjectClass函数得到该类，然后使用GetMethodID方法得到该类的方法id,然后调用该函数。
+ Java 和 Native 代码之间函数调用时，如果是简单类型，也就是内置类型，比如 int, char 等是值传递（pass by 
+value），而其它 Java 对象都是引用传递（pass by reference），这些对象引用由 JVM 传给 Native 代码。
+<br>在本地方法中调用Java对象的方法的步骤：
+<br>1）获取你需要访问的Java对象的类
+<br>FindClass通过传java中完整的类名来查找java的class
+<br>GetObjectClass通过传入jni中的一个java的引用来获取该引用的类型。
+<br>他们之间的区别是，前者要求你必须知道完整的类名，后者要求在Jni有一个类的引用。
+<br>2）获取MethodID,调用方法
+<br>GetMethodID 得到一个实例的方法的ID 
+<br>GetStaticMethodID 得到一个静态方法的ID 
+<br>3)获取对象的属性
+<br>GetFieldID 得到一个实例的域的ID 
+<br>GetStaticFieldID 得到一个静态的域的ID
+<br>JNI通过ID识别域和方法，一个域或方法的ID是任何处理域和方法的函数的必须参数。
+<br> 
+<br>二、jni中引用的java对象的生命周期
+<br>Java对象做为引用被传递到本地方法中，所有这些Java对象的引用都有一个共同的父类型jobject(相当于java中的 
+Object类是所有类的父类一样)。 这些对象引用都有其生命周期。在JNI中对Java对象的引用根据生命周期分为:全局引用，局部引用、弱全局引用
+<br>1、Local Reference 本地引用，
+<br>函数调用时传入jobject或者jni函数创建的jobejct，都是本地引用.
+<br>其特点就是一旦JNI层函数返回，jobject就被垃圾回收掉，所以需要注意其生命周期。可以强制调用DeleteLocalRef进行立即回收。
+<br> jstring pathStr = env-&gt;NewStringUTF(path)
+<br> ....
+<br> env-&gt;DeleteLocalRef(pathStr);
+<br>2、Global Reference 全局引用 ，这种对象如不主动释放，它永远都不会被垃圾回收
+<br> 创建： env-&gt;NewGlobalRef(obj);
+<br> 释放： env-&gt;DeleteGlobalRef(obj)
+<br> 若要在某个 Native 代码返回后，还希望能继续使用 JVM 提供的参数, 或者是过程中调用 JNI 函数的返回值（比如 
+g_mid）， 则将该对象设为 global reference，以后只能使用这个 global reference；若不是一个 
+jobject，则无需这么做。
+<br>3、Weak Global Reference 弱全局引用
+<br>一种特殊的 Global Reference ,在运行过程中可能被垃圾回收掉，所以使用时请务必注意其生命周期及随时可能被垃圾回收掉,比如内存不足时。
+<br> 使用前可以利用JNIEnv的 IsSameObject 进行判定它是否被回收
+<br> env-&gt;IsSameObject(obj1,obj2);
+<br>
+<br>
+<br>三、本地线程中调用java对象
+<br>问题1：
+<br>JNIEnv是一个线程相关的变量
+<br>JNIEnv 对于每个 thread 而言是唯一的 
+<br>JNIEnv *env指针不可以为多个线程共用
+<br>解决办法：
+<br>但是java虚拟机的JavaVM指针是整个jvm公用的，我们可以通过JavaVM来得到当前线程的JNIEnv指针.
+<br>可以使用javaAttachThread保证取得当前线程的Jni环境变量
+<br>static JavaVM *gs_jvm=NULL;
+<br>gs_jvm-&gt;AttachCurrentThread((void **)&amp;env, NULL);//附加当前线程到一个Java虚拟机
+<br>jclass cls = env-&gt;GetObjectClass(gs_object);
+<br>jfieldID fieldPtr = env-&gt;GetFieldID(cls,"value","I");
+<br>问题2：
+<br>不能直接保存一个线程中的jobject指针到全局变量中,然后在另外一个线程中使用它。
+<br>解决办法：
+<br>用env-&gt;NewGlobalRef创建一个全局变量，将传入的obj(局部变量)保存到全局变量中,其他线程可以使用这个全局变量来操纵这个java对象
+<br>注意：若不是一个 jobject，则不需要这么做。如：
+<br>jclass 是由 jobject public 继承而来的子类，所以它当然是一个 jobject，需要创建一个 global reference 以便日后使用。
+<br>而 jmethodID/jfieldID 与 jobject 没有继承关系，它不是一个 jobject，只是个整数，所以不存在被释放与否的问题，可保存后直接使用。
+<br>static jobject gs_object=NULL;
+<br>JNIEXPORT void JNICALL Java_Test_setEnev(JNIEnv *env, jobject obj)
+<br>{
+<br>&nbsp;&nbsp;&nbsp; env-&gt;GetJavaVM(&amp;gs_jvm); //保存到全局变量中JVM 
+<br>&nbsp;&nbsp;&nbsp; //直接赋值obj到全局变量是不行的,应该调用以下函数: 
+<br>&nbsp;&nbsp;&nbsp; gs_object=env-&gt;NewGlobalRef(obj);
+<br>}
+<br>
+<br>
+<br>jni部分代码如下:
+<br>#include
+<br>#include
+<br>#include
+<br>#include
+<br>
+<br>
+<br>#include
+<br>#include
+<br>#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
+<br>#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
+<br>#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "native-activity", __VA_ARGS__))
+<br>
+<br>
+<br>//全局变量
+<br>JavaVM *g_jvm = NULL;
+<br>jobject g_obj = NULL;
+<br>void *thread_fun(void* arg)
+<br> {
+<br>&nbsp;&nbsp;&nbsp;&nbsp; JNIEnv *env;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; jclass cls;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; jmethodID mid;
+<br>
+<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //Attach主线程
+<br>&nbsp;&nbsp;&nbsp;&nbsp; if((*g_jvm)-&gt;AttachCurrentThread(g_jvm, &amp;env, NULL) != JNI_OK)
+<br>&nbsp;&nbsp;&nbsp;&nbsp; {
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LOGE("%s: AttachCurrentThread() failed", __FUNCTION__);
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return NULL;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; }
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //找到对应的类
+<br>&nbsp;&nbsp;&nbsp;&nbsp; cls = (*env)-&gt;GetObjectClass(env,g_obj);
+<br>&nbsp;&nbsp;&nbsp;&nbsp; if(cls == NULL)
+<br>&nbsp;&nbsp;&nbsp;&nbsp; {
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LOGE("FindClass() Error.....");
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; goto error;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; }
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //再获得类中的方法
+<br>&nbsp;&nbsp;&nbsp;&nbsp; mid = (*env)-&gt;GetMethodID(env, cls, "fromJNI", "(I)V");
+<br>&nbsp;&nbsp;&nbsp;&nbsp; if (mid == NULL)
+<br>&nbsp;&nbsp;&nbsp;&nbsp; {
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LOGE("GetMethodID() Error.....");
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; goto error; 
+<br>&nbsp;&nbsp;&nbsp;&nbsp; }
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //最后调用java中的静态方法
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (*env)-&gt;CallVoidMethod(env, cls, mid ,(int)arg);
+<br>&nbsp;&nbsp; 
+<br>
+<br>
+<br> error:&nbsp;&nbsp; 
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //Detach主线程
+<br>&nbsp;&nbsp;&nbsp;&nbsp; if((*g_jvm)-&gt;DetachCurrentThread(g_jvm) != JNI_OK)
+<br>&nbsp;&nbsp;&nbsp;&nbsp; {
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LOGE("%s: DetachCurrentThread() failed", __FUNCTION__);
+<br>&nbsp;&nbsp;&nbsp;&nbsp; }
+<br>&nbsp;&nbsp;&nbsp; 
+<br>
+<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp; pthread_exit(0);
+<br> }
+<br>
+<br>
+<br> //由java调用以创建子线程
+<br> JNIEXPORT void Java_com_test_JniThreadTestActivity_mainThread( JNIEnv* env, jobject obj, jint threadNum)
+<br> {
+<br>&nbsp;&nbsp;&nbsp;&nbsp; int i;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; pthread_t* pt;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; pt = (pthread_t*) malloc(threadNum * sizeof(pthread_t));
+<br>&nbsp;&nbsp;&nbsp;&nbsp; for (i = 0; i &lt; threadNum; i++){
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //创建子线程
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; pthread_create(&amp;pt[i], NULL, &amp;thread_fun, (void *)i);
+<br>}
+<br> 
+<br>for (i = 0; i &lt; threadNum; i++){
+<br>pthread_join (pt[i], NULL);
+<br>}
+<br>LOGE("main thread exit.....");
+<br>}
+<br>
+<br>
+<br>
+<br>
+<br>//由java调用来建立JNI环境
+<br>JNIEXPORT void Java_com_test_JniThreadTestActivity_setJNIEnv( JNIEnv* env, jobject obj)
+<br> {
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //保存全局JVM以便在子线程中使用
+<br>&nbsp;&nbsp;&nbsp;&nbsp; (*env)-&gt;GetJavaVM(env,&amp;g_jvm);
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //不能直接赋值(g_obj = obj)
+<br>&nbsp;&nbsp;&nbsp;&nbsp; g_obj = (*env)-&gt;NewGlobalRef(env,obj);
+<br> }
+<br>
+<br>
+<br>
+<br>
+<br> //当动态库被加载时这个函数被系统调用
+<br> JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+<br> {
+<br>&nbsp;&nbsp;&nbsp;&nbsp; JNIEnv* env = NULL;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; jint result = -1;&nbsp;&nbsp; 
+<br>
+<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp; //获取JNI版本
+<br>&nbsp;&nbsp;&nbsp;&nbsp; if ((*vm)-&gt;GetEnv(vm, (void**)&amp;env, JNI_VERSION_1_4) != JNI_OK)
+<br>&nbsp;&nbsp;&nbsp;&nbsp; {
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LOGE("GetEnv failed!");
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return result;
+<br>&nbsp;&nbsp;&nbsp;&nbsp; }
+<br>
+<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp; return JNI_VERSION_1_4;
+<br> }
+<br>需要全部源码的,可以自行下载.代码编译通过,导入Eclipse,便可运行
+<br>
+<br>
+<br>
+<br>本文欢迎转载,转载请注明出处与作者
+<br>出处:http://blog.sina.com.cn/staratsky
+<br>作者:流星
+<br>
+    </div>
+    
+  <div class="attachments">
+    
+      
+        <ul>
+          <li><a href="http://dl.iteye.com/topics/download/c545c4df-4dea-3f55-afa0-d3423b838097">JniThreadTest.rar</a> (99.5 KB)</li>
+          
+          <li>下载次数: 35</li>
+        </ul>
+      
+    
+    
+  </div>
+
+
+          <div id="topic_copyright">声明：ITeye文章版权属于作者，受法律保护。没有作者书面许可不得转载。 </div>
+      <div id="forum_recommended_f5"><span>推荐链接</span><ul><li><!--AdForward Begin:-->
+<script ads-tid="23e08d438_0" ads-outputs="0" id="allyes_ins_2e3ae775" type="text/javascript" ads-src="http://csdnim.allyes.com/main/s?user=iteye|forums|banner4&amp;db=csdnim&amp;border=0&amp;local=yes&amp;js=ie" src="942_data/AllyesDeliver.js" charset="gbk"></script><div id="23e08d438_0" style="padding:0;margin:0;border:0;"><script type="text/javascript" data-belong="allyes" src="942_data/s.js"></script><script id="c55cb88f428db3438c2ff9b1b3a8962d:187" type="text/javascript" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/permanent.html" charset="utf-8"></script><script type="text/javascript" charset="utf-8" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/instreet.js"></script><script type="text/javascript" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/push.html"></script><div style="position: relative;" id="ins-permanent-container-1429156895171"><script type="text/javascript"> (function() {var useSSL = 'https:' == document.location.protocol; var src = (useSSL ? 'https:' : 'http:') + '//www.googletagservices.com/tag/js/gpt.js'; document.write('<scr' + 'ipt src="' + src + '"></scr' + 'ipt>'); })(); </script><script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/gpt.js"></script><script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/check_359604.js" type="text/javascript" async=""></script><iframe style="visibility: hidden; display: none;" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/container.html"></iframe> <script type="text/javascript">googletag.defineSlot('/58219033/iteye', [728, 90], 'div-gpt-ad-1429156895171-0').addService(googletag.pubads()); googletag.pubads().enableSyncRendering(); googletag.enableServices(); </script><script type="text/javascript" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/pubads_impl_59.js"></script><div id="div-gpt-ad-1429156895171-0"> <script type="text/javascript"> googletag.display('div-gpt-ad-1429156895171-0'); </script><script type="text/javascript" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/ads"></script><div id="div-gpt-ad-1429156895171-0_ad_container"><script type="text/javascript"><!--
+google_ad_client = "ca-pub-2797343905023050";
+/* 20140703-iteye-固定位-728&#42;90 */
+google_ad_slot = "1604343922";
+google_ad_width = 728;
+google_ad_height = 90;
+//-->
+</script>
+<script type="text/javascript" src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/show_ads.js">
+</script><ins id="aswift_0_expand" style="display:inline-table;border:none;height:90px;margin:0;padding:0;position:relative;visibility:visible;width:728px;background-color:transparent"><ins id="aswift_0_anchor" style="display:block;border:none;height:90px;margin:0;padding:0;position:relative;visibility:visible;width:728px;background-color:transparent"><iframe marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" onload="var i=this.id,s=window.google_iframe_oncopy,H=s&amp;&amp;s.handlers,h=H&amp;&amp;H[i],w=this.contentWindow,d;try{d=w.document}catch(e){}if(h&amp;&amp;d&amp;&amp;(!d.body||!d.body.firstChild)){if(h.call){setTimeout(h,0)}else if(h.match){try{h=s.upd(h,i)}catch(e){}w.location.replace(h)}}" id="aswift_0" name="aswift_0" style="left:0;position:absolute;top:0;" frameborder="0" height="90" width="728"></iframe></ins></ins>
+</div>
+ </div></div><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script><script type="text/javascript" data-belong="allyes" src="942_data/delay.js"></script></div>
+<!--AdForward End--></li></ul></div>
+            </td>
+  </tr>
+  <tr>
+    <td class="postauthor"><a href="#">返回顶楼</a></td>
+    <td class="postcontent">
+      <div class="icons">
+        <a href="http://staratsky.iteye.com/" class="icon_www" title="浏览作者的博客">&nbsp;</a>
+        <a href="http://staratsky.iteye.com/blog/profile" class="icon_profile" title="浏览作者资料">&nbsp;</a>
+        <a href="http://my.iteye.com/messages/new?message%5Breceiver_name%5D=mfcai" class="icon_pm" title="发送站内短信">&nbsp;</a>
+        <a href="http://staratsky.iteye.com/blog/guest_book" class="icon_guestbook" title="给作者留言">&nbsp;</a>
+        <a href="http://my.iteye.com/feed?subscription%5Bsubscribed_user_name%5D=mfcai" class="icon_rss" onclick="var f = document.createElement('form'); f.style.display = 'none'; this.parentNode.appendChild(f); f.method = 'POST'; f.action = this.href;var s = document.createElement('input'); s.setAttribute('type', 'hidden'); s.setAttribute('name', 'authenticity_token'); s.setAttribute('value', '6LBnfgtCT4QAivyyl5VjdJ5t4Tj0q+zA8a+MYcdWHd0='); f.appendChild(s);f.submit();return false;" title="关注作者">&nbsp;</a>
+              </div>
+                    </td>
+</tr>
+<tr class="sep2"><td colspan="2"></td></tr>
+
+  </tbody>
+</table>
+
+
+<div class="actions">
+  <div class="buttons"></div>
+  <div class="wrapper"></div>
+</div>
+
+<div>
+  <div class="crumbs">
+    <a href="http://www.iteye.com/forums">论坛首页</a> <span class="arrow">→</span>
+    <a href="http://www.iteye.com/forums/board/mobile">移动开发技术版</a>
+    <br><br>跳转论坛:<select id="forum_urlname" name="forum[urlname]" onchange="window.location='/forums/board/'+this.value"><option value="mobile" selected="selected">移动开发技术</option>
+<option value="web">Web前端技术</option>
+<option value="Java">Java企业应用</option>
+<option value="language">编程语言技术</option>
+<option value="Tech">综合技术</option>
+<option value="New">入门技术</option>
+<option value="Job">招聘求职</option>
+<option value="Life">海阔天空</option></select>
+    
+  </div>
+
+  
+</div>
+
+<div style="display:none">
+  <form action="/posts/rate" id="post_rate_form" method="post" onsubmit="new Ajax.Request('/posts/rate', {asynchronous:true, evalScripts:true, parameters:Form.serialize(this)}); return false;"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" value="6LBnfgtCT4QAivyyl5VjdJ5t4Tj0q+zA8a+MYcdWHd0=" type="hidden"></div>
+    <input id="post_rate_id" name="id" type="hidden">
+    <input id="post_rate_type" name="type" type="hidden">
+  </form></div>
+
+<script type="text/javascript">
+  function processComment() {
+    fix_image_size($$('div.postbody img'), 760);
+    
+    $$('#forum_main > #posts > tr[id]').each(function(tr){
+      var post_id = tr.id;
+      $$("#"+post_id+" pre[name=code]").each(function(pre, index){
+        var location = window.location;
+        source_url = location.protocol + "//" + location.host + location.pathname + location.search;
+        source_url += "#" + post_id;
+        pre.writeAttribute('codeable_type', 'Post');
+        pre.writeAttribute('codeable_id', post_id);
+        pre.writeAttribute('source_url', source_url);
+        pre.writeAttribute('pre_index', index);
+        pre.writeAttribute('title', '深入了解android平台的jni---本地多线程调用java代码');
+      });
+    });
+  }
+
+  dp.SyntaxHighlighter.HighlightAll('code', true, true);
+  processComment();
+  code_favorites_init();
+
+  function rate_post(id, type) {
+    Element.update('post_rate_box_' + id, '提交中...');
+    new Ajax.Request('/posts/rate', {asynchronous:true, evalScripts:true, parameters:{"id":id, "type":type}});
+  }
+
+  function rate_topic(type) {
+    Element.update('topic_rate_box', '提交中...');
+    new Ajax.Request('/topics/rate', {asynchronous:true, evalScripts:true, parameters:{"id":1131337, "type":type}});
+  }
+</script>
+
+
+
+        </div>
+        <div id="nav">
+  <div class="wrapper">
+    <ul>
+            <li><a href="http://www.iteye.com/">首页</a></li>
+      <li><a href="http://www.iteye.com/news">资讯</a></li>
+      <li><a href="http://www.iteye.com/magazines">精华</a></li>
+      <li><a href="http://www.iteye.com/forums" class="selected">论坛</a></li>
+      <li><a href="http://www.iteye.com/ask">问答</a></li>
+      <li><a href="http://www.iteye.com/blogs">博客</a></li>
+      <li><a href="http://www.iteye.com/blogs/subjects">专栏</a></li>
+      <li><a href="http://www.iteye.com/groups">群组</a></li>
+      <!-- <li><a target="_blank" href="http://job.iteye.com/iteye">招聘</a></li>-->
+      <li><a target="_blank" href="http://job.csdn.net/">招聘</a></li>
+      <li class="last"><a href="http://www.iteye.com/search">搜索</a></li>
+    </ul>
+  </div>
+</div>
+      </div>
+      <div id="footer">
+  <div id="site_nav">
+    <ul>
+      <li><a href="http://www.iteye.com/index/service">广告服务</a></li>
+      <li><a href="http://webmaster.iteye.com/">ITeye黑板报</a></li>
+      <li><a href="http://www.iteye.com/index/contactus">联系我们</a></li>
+      <li class="last"><a href="http://www.iteye.com/index/friend_links">友情链接</a></li>
+    </ul>
+  </div>
+  <div id="copyright">
+    © 2003-2015 ITeye.com.    [ <a href="http://www.miibeian.gov.cn/">京ICP证110151号</a>  京公网安备110105010620 ]<br>
+    百联优力(北京)投资有限公司  版权所有<br>
+  </div>
+</div>
+
+    </div>
+    <script type="text/javascript">
+  document.write("<img src='http://stat.iteye.com/?url="+ encodeURIComponent(document.location.href) + "&referrer=" + encodeURIComponent(document.referrer) + "&user_id=134762' width='0' height='0' />");
+</script><img src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/a.gif" height="0" width="0">
+
+<script src="%E6%B7%B1%E5%85%A5%E4%BA%86%E8%A7%A3android%E5%B9%B3%E5%8F%B0%E7%9A%84jni---%E6%9C%AC%E5%9C%B0%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B0%83%E7%94%A8java%E4%BB%A3%E7%A0%81%20-%20android%20jni%20thread%20jvm%20-%20mobile%20-%20ITeye%E8%AE%BA%E5%9D%9B_files/tracking.js" type="text/javascript"></script>
+
+  
+
+</body></html>

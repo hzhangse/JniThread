@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     com_test_JniThreadTestActivity
  * Method:    mainThread
- * Signature: (I)V
+ * Signature: (Lcom/test/ThreadNumber;)V
  */
 JNIEXPORT void JNICALL Java_com_test_JniThreadTestActivity_mainThread
-  (JNIEnv *, jobject, jint);
+  (JNIEnv *, jobject, jobject);
 
 /*
  * Class:     com_test_JniThreadTestActivity

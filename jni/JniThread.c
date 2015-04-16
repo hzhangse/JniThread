@@ -47,9 +47,41 @@ void *thread_fun(void* arg) {
 
 	pthread_exit(0);
 }
+JNIEXPORT void JNICALL Java_com_test_JniThreadTestActivity_mainThread(
+		JNIEnv* env, jobject obj, jobject threadNumber) {
+	int i;
+	jclass cls;
+	jmethodID mid;
+	cls = (*env)->GetObjectClass(env, threadNumber);
+	if (cls == NULL) {
+		LOGE("FindClass() Error.....");
+		goto error;
 
+	}
+	mid = (*env)->GetMethodID(env, cls, "getNumber", "()I");
+	if (mid == NULL) {
+		LOGE("GetMethodID() Error.....");
+		goto error;
+	}
+	jint threadNum = (*env)->CallIntMethod(env,threadNumber, mid);
+
+	pthread_t* pt;
+	pt = (pthread_t*) malloc(threadNum * sizeof(pthread_t));
+	for (i = 0; i < threadNum; i++) {
+		//创建子线程
+		pthread_create(&pt[i], NULL, &thread_fun, (void *) i);
+	}
+
+	for (i = 0; i < threadNum; i++) {
+		pthread_join(pt[i], NULL);
+	}
+	error:
+	LOGE("main thread exit.....");
+	mid = (*env)->GetMethodID(env, cls, "setNumber", "(I)V");
+	(*env)->CallVoidMethod(env,threadNumber, mid,threadNum+11);
+}
 //由java调用以创建子线程
-JNIEXPORT void Java_com_test_JniThreadTestActivity_mainThread(JNIEnv* env,
+JNIEXPORT void Java_com_test_JniThreadTestActivity_mainThread1(JNIEnv* env,
 		jobject obj, jint threadNum) {
 	int i;
 	pthread_t* pt;

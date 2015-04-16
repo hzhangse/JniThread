@@ -1,0 +1,649 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN" dir="ltr"><head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Android NDK开发之Jni调用Java对象 - 80后Programer---&gt;zhiweiofli - ITeye技术网站</title>
+    <meta name="description" content="  本地代码中使用Java对象  通过使用合适的JNI函数，你可以创建Java对象，get、set 静态(static)和 实例（instance）的域，调用静态(static)和实例（instance）函� ...">
+    <meta name="keywords" content="jni, c, android, ndk Android NDK开发之Jni调用Java对象">
+    <link rel="shortcut icon" href="http://zhiweiofli.iteye.com/images/favicon.ico" type="image/x-icon">
+    <link rel="search" type="application/opensearchdescription+xml" href="http://zhiweiofli.iteye.com/open_search.xml" title="ITeye">
+    <link href="http://zhiweiofli.iteye.com/rss" rel="alternate" title="80后Programer---&gt;zhiweiofli" type="application/rss+xml">
+    <link href="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/blog.css" media="screen" rel="stylesheet" type="text/css">
+<link href="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/green.css" media="screen" rel="stylesheet" type="text/css">
+    <script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/ga.js" async="" type="text/javascript"></script><script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/ca-pub-1607504866519836.js" type="text/javascript" async=""></script><script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/ga.js" async="" type="text/javascript"></script><script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/application.js" type="text/javascript"></script>
+    <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-535605-1']);
+  _gaq.push(['_setDomainName', 'iteye.com']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+
+      <link href="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/SyntaxHighlighter.css" media="screen" rel="stylesheet" type="text/css">
+  <script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/shCoreCommon.js" type="text/javascript"></script>
+<script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/hotkey.js" type="text/javascript"></script>
+  <script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/code_favorites.js" type="text/javascript"></script>
+<script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/weiboshare.js" type="text/javascript"></script>
+  <link href="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/ui.css" media="screen" rel="stylesheet" type="text/css">
+  <script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/compress.js" type="text/javascript"></script>
+  <style type="text/css">.dp-cpp .datatypes { color: #2E8B57; font-weight: bold; }</style><style type="text/css">.dp-cpp .datatypes { color: #2E8B57; font-weight: bold; }</style><style type="text/css">.dp-cpp .datatypes { color: #2E8B57; font-weight: bold; }</style><style type="text/css">.dp-cpp .datatypes { color: #2E8B57; font-weight: bold; }</style><style type="text/css">.dp-cpp .datatypes { color: #2E8B57; font-weight: bold; }</style><style type="text/css">.dp-cpp .datatypes { color: #2E8B57; font-weight: bold; }</style><style type="text/css">.dp-cpp .datatypes { color: #2E8B57; font-weight: bold; }</style></head>
+  <body>
+    <div id="header">
+      <div id="blog_site_nav">
+  <a href="http://www.iteye.com/" class="homepage">首页</a>
+  <a href="http://www.iteye.com/news">资讯</a>
+  <a href="http://www.iteye.com/magazines">精华</a>
+  <a href="http://www.iteye.com/forums">论坛</a>
+  <a href="http://www.iteye.com/ask">问答</a>
+  <a href="http://www.iteye.com/blogs">博客</a>
+  <a href="http://www.iteye.com/blogs/subjects">专栏</a>
+  <a href="http://www.iteye.com/groups">群组</a>
+  <a href="#" onclick="return false;" id="msna"><u>更多</u> <small>▼</small></a>
+  <div class="quick_menu" style="display:none;">
+    <a target="_blank" href="http://job.iteye.com/iteye">招聘</a>
+    <a href="http://www.iteye.com/search">搜索</a>
+  </div>
+</div>
+
+      <div id="user_nav">
+  
+        <a href="http://rainbow954.iteye.com/" title="查看我的博客首页" class="welcome">欢迎rainbow954</a>
+    <a title="没有未读消息" class="" id="notifications_count" href="http://my.iteye.com/notifications">0</a>
+    
+      <a href="http://my.iteye.com/messages" title="发送站内短信">收件箱</a>
+    
+    <a href="http://my.iteye.com/" title="我的应用首页">我的应用</a>
+    <div class="quick_menu" style="display:none;">
+      <a href="http://my.iteye.com/feed" title="我关注的好友动态消息">我的关注</a>
+      <a href="http://my.iteye.com/mygroup" title="我加入的群组最新话题">我的群组</a>
+      <a href="http://my.iteye.com/myresume" title="我的个人简历">我的简历</a>
+      <a href="http://my.iteye.com/admin/album" title="我的个人简历">我的相册</a>
+      <a href="http://my.iteye.com/admin/link" title="我收藏的网络资源链接">我的收藏</a>
+      <a href="http://my.iteye.com/admin/code" title="我收藏的代码">我的代码</a>
+      <a href="http://my.iteye.com/admin/weibo" title="用微博发表简短的话题">我的微博</a>
+    </div>
+    <a href="http://rainbow954.iteye.com/admin" title="管理我的博客">我的博客</a>
+    <a href="http://my.iteye.com/profile" title="修改我的个人设置">设置</a>
+    <a href="http://zhiweiofli.iteye.com/logout" class="nobg" onclick="var f = document.createElement('form'); f.style.display = 'none'; this.parentNode.appendChild(f); f.method = 'POST'; f.action = this.href;var m = document.createElement('input'); m.setAttribute('type', 'hidden'); m.setAttribute('name', '_method'); m.setAttribute('value', 'put'); f.appendChild(m);var s = document.createElement('input'); s.setAttribute('type', 'hidden'); s.setAttribute('name', 'authenticity_token'); s.setAttribute('value', '6LBnfgtCT4QAivyyl5VjdJ5t4Tj0q+zA8a+MYcdWHd0='); f.appendChild(s);f.submit();return false;">退出</a>
+  </div>
+
+    </div>
+
+    <div id="page">
+      <div id="branding" class="clearfix">
+        <div id="blog_name">
+          <h1><a href="http://zhiweiofli.iteye.com/">80后Programer---&gt;zhiweiofli</a></h1>
+        </div>
+        <div id="fd"></div>
+        <div id="blog_navbar">
+          <ul>
+            <li class="blog_navbar_for"><a href="http://zhiweiofli.iteye.com/"><strong>博客</strong></a></li>
+            <li><a href="http://zhiweiofli.iteye.com/weibo">微博</a></li>
+            <li><a href="http://zhiweiofli.iteye.com/album">相册</a></li>
+            <li><a href="http://zhiweiofli.iteye.com/link">收藏</a></li>
+            <li><a href="http://zhiweiofli.iteye.com/blog/guest_book">留言</a></li>
+            <li><a href="http://zhiweiofli.iteye.com/blog/profile">关于我</a></li>
+          </ul>
+    
+          <div class="search">
+            <form action="/blog/search" method="get">
+              <input class="search_text" id="query" name="query" style="margin-left: 10px;width: 110px;" type="text">
+              <input class="submit_search" value="" type="submit">
+            </form>
+          </div> 
+          <div id="fd"></div>         
+        </div>
+      </div>
+      <div>
+      <script type="text/javascript"><!--
+      google_ad_client = "ca-pub-1607504866519836";
+      google_ad_slot = "4872473508";
+      google_ad_width = 728;
+      google_ad_height = 90;
+      //--></script>
+      <script type="text/javascript" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/show_ads.js">
+      </script><ins id="aswift_0_expand" style="display:inline-table;border:none;height:90px;margin:0;padding:0;position:relative;visibility:visible;width:728px;background-color:transparent"><ins id="aswift_0_anchor" style="display:block;border:none;height:90px;margin:0;padding:0;position:relative;visibility:visible;width:728px;background-color:transparent"><iframe marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" onload="var i=this.id,s=window.google_iframe_oncopy,H=s&amp;&amp;s.handlers,h=H&amp;&amp;H[i],w=this.contentWindow,d;try{d=w.document}catch(e){}if(h&amp;&amp;d&amp;&amp;(!d.body||!d.body.firstChild)){if(h.call){setTimeout(h,0)}else if(h.match){try{h=s.upd(h,i)}catch(e){}w.location.replace(h)}}" id="aswift_0" name="aswift_0" style="left:0;position:absolute;top:0;" frameborder="0" height="90" width="728"></iframe></ins></ins>
+    </div>
+      <div id="content" class="clearfix">
+        <div id="main">
+          
+
+
+
+          
+
+
+<div class="h-entry" style="display:none">
+  <a href="http://zhiweiofli.iteye.com/" class="p-author" target="_blank">zhiweiofli</a>
+</div>
+
+
+<div class="blog_main">
+  <div class="blog_title">
+    <h3>
+      <a href="http://zhiweiofli.iteye.com/blog/1830321">Android NDK开发之Jni调用Java对象</a>
+      <em class="actions">      </em>
+    </h3>
+    <ul class="blog_categories"><strong>博客分类：</strong> <li><a href="http://zhiweiofli.iteye.com/category/138152">Android那些事儿</a></li> </ul>
+        <div class="news_tag"><a href="http://www.iteye.com/blogs/tag/jni">jni</a><a href="http://www.iteye.com/blogs/tag/c">c</a><a href="http://www.iteye.com/blogs/tag/android">android</a><a href="http://www.iteye.com/blogs/tag/ndk">ndk</a></div>
+  </div>
+
+  <div id="blog_content" class="blog_content">
+    <div class="iteye-blog-content-contain" style="font-size: 14px;">
+<h2><span style="color: #337fe5;">本地代码中使用Java对象</span></h2>
+<p><span style="color: #000000;">通过使用合适的JNI函数，你可以创建Java对象，get、set 
+静态(static)和 
+实例（instance）的域，调用静态(static)和实例（instance）函数。JNI通过ID识别域和方法，一个域或方法的ID是任何处理域
+和方法的函数的必须参数。</span><br><span style="color: #000000;"> 下表列出了用以得到静态(static)和实例（instance）的域与方法的JNI函数。每个函数接受（作为参数）域或方法的类，它们的名称，符号和它们对应返回的jfieldID或jmethodID。</span></p>
+<table style="font-family: Tahoma;" border="1" cellpadding="2" cellspacing="0">
+<tbody><tr>
+<td>函数&nbsp;</td>
+<td>描述</td>
+</tr>
+<tr>
+<td>GetFieldID</td>
+<td>&nbsp;得到一个实例的域的ID</td>
+</tr>
+<tr>
+<td>GetStaticFieldID&nbsp;</td>
+<td>得到一个静态的域的ID</td>
+</tr>
+<tr>
+<td>GetMethodID</td>
+<td>得到一个实例的方法的ID</td>
+</tr>
+<tr>
+<td>GetStaticMethodID</td>
+<td>得到一个静态方法的ID</td>
+</tr>
+</tbody></table>
+<p>构造一个Java对象的实例</p>
+<div id="" class="dp-highlighter"><div class="bar"><div class="tools">C代码 <embed wmode="transparent" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/clipboard_new.swf" flashvars="clipboard=jclass%20cls%20%3D%20(*env)-%3EFindClass(env%2C%20%22Lpackagename%2Fclassname%3B%22)%3B%20%20%2F%2F%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AAclass%E7%9A%84%E5%BC%95%E7%94%A8%0AjmethodID%20id%20%3D%20(*env)-%3EGetMethodID(env%2C%20cls%2C%20%22%22%2C%20%22(D)V%22)%3B%20%20%2F%2F%E6%B3%A8%E6%84%8F%E8%BF%99%E9%87%8C%E6%96%B9%E6%B3%95%E7%9A%84%E5%90%8D%E7%A7%B0%E6%98%AF%22%22%EF%BC%8C%E5%AE%83%E8%A1%A8%E7%A4%BA%E8%BF%99%E6%98%AF%E4%B8%80%E4%B8%AA%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%EF%BC%8C%E8%80%8C%E4%B8%94%E6%9E%84%E9%80%A0%E5%8F%82%E6%95%B0%E6%98%AFdouble%E5%9E%8B%E7%9A%84%0Ajobject%20obj%20%3D%20(*env)-%3ENewObjectA(env%2C%20cls%2C%20id%2C%20args)%3B%20%20%2F%2F%E8%8E%B7%E5%BE%97%E4%B8%80%E5%AE%9E%E4%BE%8B%EF%BC%8Cargs%E6%98%AF%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E7%9A%84%E5%8F%82%E6%95%B0%EF%BC%8C%E5%AE%83%E6%98%AF%E4%B8%80%E4%B8%AAjvalue*%E7%B1%BB%E5%9E%8B%E3%80%82" quality="high" allowscriptaccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" height="15" width="14">&nbsp;<a href="javascript:void()" title="收藏这段代码" onclick="code_favorites_do_favorite(this);return false;"><img class="star" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_star.png" alt="收藏代码"><img class="spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner_002.gif" style="display:none"></a></div></div><ol class="dp-cpp" start="1"><li><span><span>jclass&nbsp;cls&nbsp;=&nbsp;(*env)-&gt;FindClass(env,&nbsp;</span><span class="string">"Lpackagename/classname;"</span><span>);&nbsp;&nbsp;</span><span class="comment">//创建一个class的引用</span><span>&nbsp;&nbsp;</span></span></li><li><span>jmethodID&nbsp;id&nbsp;=&nbsp;(*env)-&gt;GetMethodID(env,&nbsp;cls,&nbsp;<span class="string">""</span><span>,&nbsp;</span><span class="string">"(D)V"</span><span>);&nbsp;&nbsp;</span><span class="comment">//注意这里方法的名称是""，它表示这是一个构造函数，而且构造参数是double型的</span><span>&nbsp;&nbsp;</span></span></li><li><span>jobject&nbsp;obj&nbsp;=&nbsp;(*env)-&gt;NewObjectA(env,&nbsp;cls,&nbsp;id,&nbsp;args);&nbsp;&nbsp;<span class="comment">//获得一实例，args是构造函数的参数，它是一个jvalue*类型。</span><span>&nbsp;&nbsp;</span></span></li></ol></div><pre title="Android NDK开发之Jni调用Java对象" pre_index="0" source_url="http://zhiweiofli.iteye.com/blog/1830321" codeable_type="Blog" codeable_id="1830321" style="display: none;" class="c" name="code">jclass cls = (*env)-&gt;FindClass(env, "Lpackagename/classname;");  //创建一个class的引用
+jmethodID id = (*env)-&gt;GetMethodID(env, cls, "", "(D)V");  //注意这里方法的名称是""，它表示这是一个构造函数，而且构造参数是double型的
+jobject obj = (*env)-&gt;NewObjectA(env, cls, id, args);  //获得一实例，args是构造函数的参数，它是一个jvalue*类型。</pre>
+<p>首先是<span style="color: #337fe5;">获得一个Java类的class引用&nbsp;</span>(*env)-&gt;FindClass(env, "Lpackagename/classname;"); &nbsp;请注意参数：<strong><span style="color: #337fe5;">Lpackagename/classname;&nbsp;</span></strong>，L代表这是在描述一个对象类型，packagename/classname是该对象耳朵class路径，请注意一定要以分号（；）结束！</p>
+<p>然后是获取函数的id，jmethodID id = env-&gt;GetMethodID(cls, "", "(D)V");&nbsp; 第一个是刚刚获得的class引用，第二个是方法的名称，最后一个就是<strong><span style="color: #337fe5;">方法的签名</span></strong>了</p>
+<p>还是不懂？我曾经如此，请接着看...</p>
+<p>&nbsp;</p>
+<h2><span style="color: #337fe5;">难理解的函数签名</span></h2>
+<p>JNINativeMethod的定义如下：</p>
+<div id="" class="dp-highlighter"><div class="bar"><div class="tools">C代码 <embed wmode="transparent" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/clipboard_new.swf" flashvars="clipboard=typedef%20struct%20%7B%0A%20%20%20const%20char*%20name%3B%0A%20%20%20const%20char*%20signature%3B%0A%20%20%20void*%20fnPtr%3B%0A%7D%20JNINativeMethod%3B" quality="high" allowscriptaccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" height="15" width="14">&nbsp;<a href="javascript:void()" title="收藏这段代码" onclick="code_favorites_do_favorite(this);return false;"><img class="star" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_star.png" alt="收藏代码"><img class="spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner_002.gif" style="display:none"></a></div></div><ol class="dp-cpp" start="1"><li><span><span class="keyword">typedef</span><span>&nbsp;</span><span class="keyword">struct</span><span>&nbsp;{&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;<span class="keyword">const</span><span>&nbsp;</span><span class="datatypes">char</span><span>*&nbsp;name;&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;<span class="keyword">const</span><span>&nbsp;</span><span class="datatypes">char</span><span>*&nbsp;signature;&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;<span class="keyword">void</span><span>*&nbsp;fnPtr;&nbsp;&nbsp;</span></span></li><li><span>}&nbsp;JNINativeMethod;&nbsp;&nbsp;</span></li></ol></div><pre title="Android NDK开发之Jni调用Java对象" pre_index="1" source_url="http://zhiweiofli.iteye.com/blog/1830321" codeable_type="Blog" codeable_id="1830321" style="display: none;" class="c" name="code">typedef struct {
+   const char* name;
+   const char* signature;
+   void* fnPtr;
+} JNINativeMethod;</pre>
+<p>第一个变量name是Java中函数的名字。 <br> 第二个变量signature，用字符串是描述了函数的参数和返回值 <br> 第三个变量fnPtr是函数指针，指向C函数。</p>
+<p>&nbsp;</p>
+<p>其中比较难以理解的是第二个参数，例如<br> "()V"<br> "(II)V"<br> "(Ljava/lang/String;Ljava/lang/String;)V"</p>
+<p><br> 实际上这些字符是与函数的参数类型一一对应的。<br> "()" 中的字符表示参数，后面的则代表返回值。例如"()V" 就表示void Func();<br> "(II)V" 表示 void Func(int, int);</p>
+<div>&nbsp;</div>
+<p>那其他情况呢？请查看下表：</p>
+<table border="1" cellpadding="2" cellspacing="0">
+<tbody><tr>
+<td>
+<div>类型</div>
+</td>
+<td>符号</td>
+</tr>
+<tr>
+<td><span style="color: #000000;">boolean</span></td>
+<td><span style="color: #000000;">Z</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">byte</span></td>
+<td><span style="color: #000000;">B</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">char</span></td>
+<td><span style="color: #000000;">C</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">short</span></td>
+<td><span style="color: #000000;">S</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">int</span></td>
+<td><span style="color: #000000;">I</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">long</span></td>
+<td><span style="color: #000000;">L</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">float</span></td>
+<td><span style="color: #000000;">F</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">double</span></td>
+<td><span style="color: #000000;">D</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">void</span></td>
+<td><span style="color: #000000;">V</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">object对象</span></td>
+<td><span style="color: #000000;">LClassName; &nbsp; &nbsp; &nbsp;L类名;</span></td>
+</tr>
+<tr>
+<td><span style="color: #000000;">Arrays</span></td>
+<td>
+<div><span style="color: #000000;">[array-type &nbsp; &nbsp; &nbsp; &nbsp;[数组类型</span></div>
+</td>
+</tr>
+<tr>
+<td><span style="color: #000000;">methods方法</span></td>
+<td><span style="color: #000000;">(argument-types)return-type &nbsp; &nbsp; (参数类型)返回类型</span></td>
+</tr>
+</tbody></table>
+<p>稍稍补充一下：</p>
+<p>1、方法参数或者返回值为java中的对象时，签名中必须以“L”加上其路径，不过此路径必须以“/”分开，自定义的对象也使用本规则</p>
+<p>比如说 java.lang.String为“java/lang/String”，com.nedu.jni.helloword.Student为"Lcom /nedu/jni/helloword/Student;"</p>
+<p><span style="color: #000000;">2、方法参数或者返回值为数组类型时，请前加上[</span></p>
+<p><span style="color: #000000;">例如[I表示 int[],[[[D表示 double[][][]，即几维数组就加几个[</span></p>
+<div><img class="magplus" title="点击查看原始大小图片" alt="" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/15235918_bbUi.jpg" height="209" width="700"></div>
+<h2><span style="color: #337fe5;">在本地方法中调用Java对象的方法</span></h2>
+<h4>1、获取你需要访问的Java对象的类：</h4>
+<div id="" class="dp-highlighter"><div class="bar"><div class="tools">C代码 <embed wmode="transparent" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/clipboard_new.swf" flashvars="clipboard=jclass%20cls%20%3D%20(*env)-%3EGetObjectClass(env%2C%20obj)%3B%20%20%20%20%20%20%20%2F%2F%20%E4%BD%BF%E7%94%A8GetObjectClass%E6%96%B9%E6%B3%95%E8%8E%B7%E5%8F%96obj%E5%AF%B9%E5%BA%94%E7%9A%84jclass%E3%80%82%20%0Ajclass%20cls%20%3D%20(*env)-%3EFindClass(%E2%80%9Candroid%2Futil%2Flog%E2%80%9D)%20%2F%2F%20%E7%9B%B4%E6%8E%A5%E6%90%9C%E7%B4%A2%E7%B1%BB%E5%90%8D%EF%BC%8C%E9%9C%80%E8%A6%81%E6%98%AFstatic%E4%BF%AE%E9%A5%B0%E7%9A%84%E7%B1%BB%E3%80%82" quality="high" allowscriptaccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" height="15" width="14">&nbsp;<a href="javascript:void()" title="收藏这段代码" onclick="code_favorites_do_favorite(this);return false;"><img class="star" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_star.png" alt="收藏代码"><img class="spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner_002.gif" style="display:none"></a></div></div><ol class="dp-cpp" start="1"><li><span><span>jclass&nbsp;cls&nbsp;=&nbsp;(*env)-&gt;GetObjectClass(env,&nbsp;obj);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="comment">//&nbsp;使用GetObjectClass方法获取obj对应的jclass。&nbsp;</span><span>&nbsp;&nbsp;</span></span></li><li><span>jclass&nbsp;cls&nbsp;=&nbsp;(*env)-&gt;FindClass(“android/util/log”)&nbsp;<span class="comment">//&nbsp;直接搜索类名，需要是static修饰的类。</span><span>&nbsp;&nbsp;</span></span></li></ol></div><pre title="Android NDK开发之Jni调用Java对象" pre_index="2" source_url="http://zhiweiofli.iteye.com/blog/1830321" codeable_type="Blog" codeable_id="1830321" style="display: none;" class="c" name="code">jclass cls = (*env)-&gt;GetObjectClass(env, obj);       // 使用GetObjectClass方法获取obj对应的jclass。 
+jclass cls = (*env)-&gt;FindClass(“android/util/log”) // 直接搜索类名，需要是static修饰的类。</pre>
+<h4>&nbsp;</h4>
+<h4>2、获取MethodID：</h4>
+<div id="" class="dp-highlighter"><div class="bar"><div class="tools">C代码 <embed wmode="transparent" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/clipboard_new.swf" flashvars="clipboard=jmethodID%20mid%20%3D%20(*env)-%3EGetMethodID(env%2C%20cls%2C%20%22callback%22%2C%20%22(I)V%22)%3B%20%2F%2FGetStaticMethodID(%E2%80%A6)%EF%BC%8C%E8%8E%B7%E5%8F%96%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95%E7%9A%84ID%E4%BD%BF%E7%94%A8GetMethdoID%E6%96%B9%E6%B3%95%E8%8E%B7%E5%8F%96%E4%BD%A0%E8%A6%81%E4%BD%BF%E7%94%A8%E7%9A%84%E6%96%B9%E6%B3%95%E7%9A%84MethdoID" quality="high" allowscriptaccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" height="15" width="14">&nbsp;<a href="javascript:void()" title="收藏这段代码" onclick="code_favorites_do_favorite(this);return false;"><img class="star" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_star.png" alt="收藏代码"><img class="spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner_002.gif" style="display:none"></a></div></div><ol class="dp-cpp" start="1"><li><span><span>jmethodID&nbsp;mid&nbsp;=&nbsp;(*env)-&gt;GetMethodID(env,&nbsp;cls,&nbsp;</span><span class="string">"callback"</span><span>,&nbsp;</span><span class="string">"(I)V"</span><span>);&nbsp;</span><span class="comment">//GetStaticMethodID(…)，获取静态方法的ID使用GetMethdoID方法获取你要使用的方法的MethdoID</span><span>&nbsp;&nbsp;</span></span></li></ol></div><pre title="Android NDK开发之Jni调用Java对象" pre_index="3" source_url="http://zhiweiofli.iteye.com/blog/1830321" codeable_type="Blog" codeable_id="1830321" style="display: none;" class="c" name="code">jmethodID mid = (*env)-&gt;GetMethodID(env, cls, "callback", "(I)V"); //GetStaticMethodID(…)，获取静态方法的ID使用GetMethdoID方法获取你要使用的方法的MethdoID</pre>
+<p>其参数的意义： <br> env--&gt;JNIEnv <br> cls--&gt;第一步获取的jclass <br> "callback"--&gt;要调用的方法名 <br> "(I)V"--&gt;方法的Signature, 签名同前面的JNI规则。</p>
+<p>&nbsp;</p>
+<h4>3、调用方法：</h4>
+<div id="" class="dp-highlighter"><div class="bar"><div class="tools">C代码 <embed wmode="transparent" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/clipboard_new.swf" flashvars="clipboard=(*env)-%3ECallVoidMethod(env%2C%20obj%2C%20mid%2C%20depth)%3B%2F%2F%20CallStaticIntMethod(%E2%80%A6.)%20%EF%BC%8C%20%E8%B0%83%E7%94%A8%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95" quality="high" allowscriptaccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" height="15" width="14">&nbsp;<a href="javascript:void()" title="收藏这段代码" onclick="code_favorites_do_favorite(this);return false;"><img class="star" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_star.png" alt="收藏代码"><img class="spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner_002.gif" style="display:none"></a></div></div><ol class="dp-cpp" start="1"><li><span><span>(*env)-&gt;CallVoidMethod(env,&nbsp;obj,&nbsp;mid,&nbsp;depth);</span><span class="comment">//&nbsp;CallStaticIntMethod(….)&nbsp;，&nbsp;调用静态方法</span><span>&nbsp;&nbsp;</span></span></li></ol></div><pre title="Android NDK开发之Jni调用Java对象" pre_index="4" source_url="http://zhiweiofli.iteye.com/blog/1830321" codeable_type="Blog" codeable_id="1830321" style="display: none;" class="c" name="code">(*env)-&gt;CallVoidMethod(env, obj, mid, depth);// CallStaticIntMethod(….) ， 调用静态方法</pre>
+<p>使用CallVoidMethod方法调用方法。参数的意义： <br> env--&gt;JNIEnv <br> obj--&gt;通过本地方法穿过来的jobject <br> mid--&gt;要调用的MethodID（即第二步获得的MethodID） <br> depth--&gt;方法需要的参数（对应方法的需求，添加相应的参数）</p>
+<p>&nbsp;</p>
+<p>注：这里使用的是CallVoidMethod方法调用，因为没有返回值，如果有返回值的话使用对应的方法，在后面会提到。</p>
+<div id="" class="dp-highlighter"><div class="bar"><div class="tools">C代码 <embed wmode="transparent" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/clipboard_new.swf" flashvars="clipboard=CallVoidMethod%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20CallStaticVoidMethod%0ACallIntMethod%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20CallStaticVoidMethod%0ACallBooleanMethod%20%20%20%20%20%20%20%20%20%20%20%20%20%20CallStaticVoidMethod%0ACallByteMethod%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20CallStaticVoidMethod" quality="high" allowscriptaccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" height="15" width="14">&nbsp;<a href="javascript:void()" title="收藏这段代码" onclick="code_favorites_do_favorite(this);return false;"><img class="star" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_star.png" alt="收藏代码"><img class="spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner_002.gif" style="display:none"></a></div></div><ol class="dp-cpp" start="1"><li><span><span>CallVoidMethod&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CallStaticVoidMethod&nbsp;&nbsp;</span></span></li><li><span>CallIntMethod&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CallStaticVoidMethod&nbsp;&nbsp;</span></li><li><span>CallBooleanMethod&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CallStaticVoidMethod&nbsp;&nbsp;</span></li><li><span>CallByteMethod&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CallStaticVoidMethod&nbsp;&nbsp;</span></li></ol></div><pre title="Android NDK开发之Jni调用Java对象" pre_index="5" source_url="http://zhiweiofli.iteye.com/blog/1830321" codeable_type="Blog" codeable_id="1830321" style="display: none;" class="c" name="code">CallVoidMethod                   CallStaticVoidMethod
+CallIntMethod                     CallStaticVoidMethod
+CallBooleanMethod              CallStaticVoidMethod
+CallByteMethod                   CallStaticVoidMethod</pre>
+<p>现在稍稍明白文章开始构造Java对象那个实例了吧？让我们继续深入一下：</p>
+<p>&nbsp;</p>
+<h2><span style="color: #337fe5;">Jni操作Java的String对象</span></h2>
+<p>从java程序中传过去的String对象在本地方法中对应的是jstring类型，jstring类型和c中的char*不同，所以如果你直接当
+做char*使用的话，就会出错。因此在使用之前需要将jstring转换成为c/c++中的char*，这里使用JNIEnv提供的方法转换。</p>
+<pre class="prettyprint lang-cpp">const char *str = (*env)-&gt;GetStringUTFChars(env, jstr, 0);
+(*env)-&gt;ReleaseStringUTFChars(env, jstr, str);</pre>
+<p>这里使用GetStringUTFChars方法将传进来的prompt（jstring类型）转换成为UTF－8的格式，就能够在本地方法中使用了。<br> 注意：在使用完你所转换之后的对象之后，需要显示调用ReleaseStringUTFChars方法，让JVM释放转换成UTF-8的string的对象的空间，如果不显示的调用的话，JVM中会一直保存该对象，不会被垃圾回收器回收，因此就会导致内存溢出。<br><br> 下面是Jni访问String对象的一些方法：</p>
+<ul>
+<li><span style="color: #000000;">GetStringUTFChars &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;将jstring转换成为UTF-8格式的char*</span></li>
+<li><span style="color: #000000;">GetStringChars &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 将jstring转换成为Unicode格式的char*</span></li>
+<li><span style="color: #000000;">ReleaseStringUTFChars &nbsp; &nbsp;释放指向UTF-8格式的char*的指针</span></li>
+<li><span style="color: #000000;">ReleaseStringChars &nbsp; &nbsp; &nbsp; &nbsp; 释放指向Unicode格式的char*的指针</span></li>
+<li><span style="color: #000000;">NewStringUTF &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 创建一个UTF-8格式的String对象</span></li>
+<li><span style="color: #000000;">NewString &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;创建一个Unicode格式的String对象</span></li>
+<li><span style="color: #000000;">GetStringUTFLength &nbsp; &nbsp; &nbsp;获取UTF-8格式的char*的长度</span></li>
+<li><span style="color: #000000;">GetStringLength &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 获取Unicode格式的char*的长度</span></li>
+</ul>
+<p><span style="color: #000000;">下面提供两个String对象和char*互转的方法：</span></p>
+<div>
+<div id="" class="dp-highlighter"><div class="bar"><div class="tools">C代码 <embed wmode="transparent" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/clipboard_new.swf" flashvars="clipboard=%2F*%20c%2Fc%2B%2B%20string%20turn%20to%20java%20jstring%20*%2F%0Ajstring%20charToJstring(JNIEnv*%20env%2C%20const%20char*%20pat)%0A%7B%0A%09jclass%20%20%20%20%20strClass%20%3D%20(*env)-%3EFindClass(env%2C%20%22java%2Flang%2FString%22)%3B%0A%09jmethodID%20%20ctorID%20%20%20%3D%20(*env)-%3EGetMethodID(env%2C%20strClass%2C%20%22%22%2C%20%22(%5BBLjava%2Flang%2FString%3B)V%22)%3B%0A%09jbyteArray%20bytes%20%20%20%20%3D%20(*env)-%3ENewByteArray(env%2C%20strlen(pat))%3B%0A%09(*env)-%3ESetByteArrayRegion(env%2C%20bytes%2C%200%2C%20strlen(pat)%2C%20(jbyte*)pat)%3B%0A%09jstring%20%20%20%20encoding%20%3D%20(*env)-%3ENewStringUTF(env%2C%20%22UTF-8%22)%3B%0A%09return%20(jstring)(*env)-%3ENewObject(env%2C%20strClass%2C%20ctorID%2C%20bytes%2C%20encoding)%3B%0A%7D%0A%0A%2F*%20java%20jstring%20turn%20to%20c%2Fc%2B%2B%20char*%20*%2F%0Achar*%20jstringToChar(JNIEnv*%20env%2C%20jstring%20jstr)%0A%7B%20%20%20%20%20%20%20%0A%20%20%20%20char*%20pStr%20%3D%20NULL%3B%0A%20%20%20%20jclass%20%20%20%20%20jstrObj%20%20%20%3D%20(*env)-%3EFindClass(env%2C%20%22java%2Flang%2FString%22)%3B%0A%20%20%20%20jstring%20%20%20%20encode%20%20%20%20%3D%20(*env)-%3ENewStringUTF(env%2C%20%22utf-8%22)%3B%0A%20%20%20%20jmethodID%20%20methodId%20%20%3D%20(*env)-%3EGetMethodID(env%2C%20jstrObj%2C%20%22getBytes%22%2C%20%22(Ljava%2Flang%2FString%3B)%5BB%22)%3B%0A%20%20%20%20jbyteArray%20byteArray%20%3D%20(jbyteArray)(*env)-%3ECallObjectMethod(env%2C%20jstr%2C%20methodId%2C%20encode)%3B%0A%20%20%20%20jsize%20%20%20%20%20%20strLen%20%20%20%20%3D%20(*env)-%3EGetArrayLength(env%2C%20byteArray)%3B%0A%20%20%20%20jbyte%20%20%20%20%20%20*jBuf%20%20%20%20%20%3D%20(*env)-%3EGetByteArrayElements(env%2C%20byteArray%2C%20JNI_FALSE)%3B%0A%20%20%20%20if%20(jBuf%20%3E%200)%0A%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20pStr%20%3D%20(char*)malloc(strLen%20%2B%201)%3B%0A%20%20%20%20%20%20%20%20if%20(!pStr)%0A%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20return%20NULL%3B%0A%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20memcpy(pStr%2C%20jBuf%2C%20strLen)%3B%0A%20%20%20%20%20%20%20%20pStr%5BstrLen%5D%20%3D%200%3B%0A%20%20%20%20%7D%0A%20%20%20%20env-%3EReleaseByteArrayElements(byteArray%2C%20jBuf%2C%200)%3B%0A%20%20%20%20return%20pStr%3B%0A%7D" quality="high" allowscriptaccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" height="15" width="14">&nbsp;<a href="javascript:void()" title="收藏这段代码" onclick="code_favorites_do_favorite(this);return false;"><img class="star" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_star.png" alt="收藏代码"><img class="spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner_002.gif" style="display:none"></a></div></div><ol class="dp-cpp" start="1"><li><span><span class="comment">/*&nbsp;c/c++&nbsp;string&nbsp;turn&nbsp;to&nbsp;java&nbsp;jstring&nbsp;*/</span><span>&nbsp;&nbsp;</span></span></li><li><span>jstring&nbsp;charToJstring(JNIEnv*&nbsp;env,&nbsp;<span class="keyword">const</span><span>&nbsp;</span><span class="datatypes">char</span><span>*&nbsp;pat)&nbsp;&nbsp;</span></span></li><li><span>{&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jclass&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strClass&nbsp;=&nbsp;(*env)-&gt;FindClass(env,&nbsp;<span class="string">"java/lang/String"</span><span>);&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jmethodID&nbsp;&nbsp;ctorID&nbsp;&nbsp;&nbsp;=&nbsp;(*env)-&gt;GetMethodID(env,&nbsp;strClass,&nbsp;<span class="string">""</span><span>,&nbsp;</span><span class="string">"([BLjava/lang/String;)V"</span><span>);&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jbyteArray&nbsp;bytes&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;(*env)-&gt;NewByteArray(env,&nbsp;strlen(pat));&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;(*env)-&gt;SetByteArrayRegion(env,&nbsp;bytes,&nbsp;0,&nbsp;strlen(pat),&nbsp;(jbyte*)pat);&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jstring&nbsp;&nbsp;&nbsp;&nbsp;encoding&nbsp;=&nbsp;(*env)-&gt;NewStringUTF(env,&nbsp;<span class="string">"UTF-8"</span><span>);&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span><span>&nbsp;(jstring)(*env)-&gt;NewObject(env,&nbsp;strClass,&nbsp;ctorID,&nbsp;bytes,&nbsp;encoding);&nbsp;&nbsp;</span></span></li><li><span>}&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;</span></li><li><span><span class="comment">/*&nbsp;java&nbsp;jstring&nbsp;turn&nbsp;to&nbsp;c/c++&nbsp;char*&nbsp;*/</span><span>&nbsp;&nbsp;</span></span></li><li><span><span class="datatypes">char</span><span>*&nbsp;jstringToChar(JNIEnv*&nbsp;env,&nbsp;jstring&nbsp;jstr)&nbsp;&nbsp;</span></span></li><li><span>{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="datatypes">char</span><span>*&nbsp;pStr&nbsp;=&nbsp;NULL;&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jclass&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;jstrObj&nbsp;&nbsp;&nbsp;=&nbsp;(*env)-&gt;FindClass(env,&nbsp;<span class="string">"java/lang/String"</span><span>);&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jstring&nbsp;&nbsp;&nbsp;&nbsp;encode&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;(*env)-&gt;NewStringUTF(env,&nbsp;<span class="string">"utf-8"</span><span>);&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jmethodID&nbsp;&nbsp;methodId&nbsp;&nbsp;=&nbsp;(*env)-&gt;GetMethodID(env,&nbsp;jstrObj,&nbsp;<span class="string">"getBytes"</span><span>,&nbsp;</span><span class="string">"(Ljava/lang/String;)[B"</span><span>);&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jbyteArray&nbsp;byteArray&nbsp;=&nbsp;(jbyteArray)(*env)-&gt;CallObjectMethod(env,&nbsp;jstr,&nbsp;methodId,&nbsp;encode);&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jsize&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strLen&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;(*env)-&gt;GetArrayLength(env,&nbsp;byteArray);&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;jbyte&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*jBuf&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;(*env)-&gt;GetByteArrayElements(env,&nbsp;byteArray,&nbsp;JNI_FALSE);&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span><span>&nbsp;(jBuf&nbsp;&gt;&nbsp;0)&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pStr&nbsp;=&nbsp;(<span class="datatypes">char</span><span>*)malloc(strLen&nbsp;+&nbsp;1);&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span><span>&nbsp;(!pStr)&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span><span>&nbsp;NULL;&nbsp;&nbsp;</span></span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;memcpy(pStr,&nbsp;jBuf,&nbsp;strLen);&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pStr[strLen]&nbsp;=&nbsp;0;&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;env-&gt;ReleaseByteArrayElements(byteArray,&nbsp;jBuf,&nbsp;0);&nbsp;&nbsp;</span></li><li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span><span>&nbsp;pStr;&nbsp;&nbsp;</span></span></li><li><span>}&nbsp;&nbsp;</span></li></ol></div><pre title="Android NDK开发之Jni调用Java对象" pre_index="6" source_url="http://zhiweiofli.iteye.com/blog/1830321" codeable_type="Blog" codeable_id="1830321" style="display: none;" class="c" name="code">/* c/c++ string turn to java jstring */
+jstring charToJstring(JNIEnv* env, const char* pat)
+{
+	jclass     strClass = (*env)-&gt;FindClass(env, "java/lang/String");
+	jmethodID  ctorID   = (*env)-&gt;GetMethodID(env, strClass, "", "([BLjava/lang/String;)V");
+	jbyteArray bytes    = (*env)-&gt;NewByteArray(env, strlen(pat));
+	(*env)-&gt;SetByteArrayRegion(env, bytes, 0, strlen(pat), (jbyte*)pat);
+	jstring    encoding = (*env)-&gt;NewStringUTF(env, "UTF-8");
+	return (jstring)(*env)-&gt;NewObject(env, strClass, ctorID, bytes, encoding);
+}
+
+/* java jstring turn to c/c++ char* */
+char* jstringToChar(JNIEnv* env, jstring jstr)
+{       
+    char* pStr = NULL;
+    jclass     jstrObj   = (*env)-&gt;FindClass(env, "java/lang/String");
+    jstring    encode    = (*env)-&gt;NewStringUTF(env, "utf-8");
+    jmethodID  methodId  = (*env)-&gt;GetMethodID(env, jstrObj, "getBytes", "(Ljava/lang/String;)[B");
+    jbyteArray byteArray = (jbyteArray)(*env)-&gt;CallObjectMethod(env, jstr, methodId, encode);
+    jsize      strLen    = (*env)-&gt;GetArrayLength(env, byteArray);
+    jbyte      *jBuf     = (*env)-&gt;GetByteArrayElements(env, byteArray, JNI_FALSE);
+    if (jBuf &gt; 0)
+    {
+        pStr = (char*)malloc(strLen + 1);
+        if (!pStr)
+        {
+            return NULL;
+        }
+        memcpy(pStr, jBuf, strLen);
+        pStr[strLen] = 0;
+    }
+    env-&gt;ReleaseByteArrayElements(byteArray, jBuf, 0);
+    return pStr;
+}</pre>
+</div>
+<p>&nbsp;</p>
+<p><strong><span style="color: #337fe5;">本文转自<a target="_blank" href="http://zhiwei.neatooo.com/">Zhiweiofli's Blog</a>，转载请注明出处，谢谢。</span></strong></p>
+</div>
+  </div>
+
+  
+
+  
+  
+  <iframe src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/794.html" scrolling="no" frameborder="0" height="60" width="468"></iframe>
+  
+  <div id="bottoms" class="clearfix">
+    
+    <div id="share_weibo">分享到：
+      <a data-type="sina" href="javascript:;" title="分享到新浪微博"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/sina.jpg"></a>
+      <a data-type="qq" href="javascript:;" title="分享到腾讯微博"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/tec.jpg"></a>
+    </div>
+  </div>
+
+  <div class="blog_nav">
+    <div class="pre_next">
+      <a href="http://zhiweiofli.iteye.com/blog/1900247" class="next" title="TextView的日常使用技巧">TextView的日常使用技巧</a>
+      |
+      <a href="http://zhiweiofli.iteye.com/blog/1830319" class="pre" title="Android NDK开发之数组类型的操作">Android NDK开发之数组类型的操作</a>
+    </div>
+  </div>
+  <div class="blog_bottom">
+    <ul>
+      <li>2013-03-16 00:11</li>
+      <li>浏览 8057</li>
+      <li><a href="#comments">评论(0)</a></li>
+      
+      
+        <li><a href="http://zhiweiofli.iteye.com/admin/link?user_favorite%5Btitle%5D=Android+NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1&amp;user_favorite%5Burl%5D=http%3A%2F%2Fzhiweiofli.iteye.com%2Fblog%2F1830321" target="_blank" class="favorite" onclick="$$('.favorite_form_spinner')[0].show();new Ajax.Request('/admin/link/new_xhr?user_favorite%5Btitle%5D=Android+NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1&amp;user_favorite%5Burl%5D=http%3A%2F%2Fzhiweiofli.iteye.com%2Fblog%2F1830321', {method: 'get', onSuccess: function(response){$(document.getElementsByTagName('body')[0]).insert({bottom:response.responseText});$$('.favorite_form_spinner')[0].hide();}});return false;">收藏</a><img alt="Spinner" class="favorite_form_spinner" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/spinner.gif" style="vertical-align:bottom;margin-left:7px;display:none;"></li>
+      
+      <li>分类:<a href="http://www.iteye.com/blogs/category/mobile">移动开发</a></li>      
+      <li class="last"><a href="http://www.iteye.com/wiki/blog/1830321" target="_blank" class="more">相关推荐</a></li>
+    </ul>
+  </div>
+
+  <div class="blog_comment">
+    <h5>评论</h5>
+    <a id="comments" name="comments"></a>
+    
+    
+    
+  </div>
+
+  <div class="blog_comment">
+    <h5>发表评论</h5>
+            <form action="/blog/1830321" id="comment_form" method="post" onsubmit="return false;"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" value="6LBnfgtCT4QAivyyl5VjdJ5t4Tj0q+zA8a+MYcdWHd0=" type="hidden"></div>          
+
+
+  <input value="true" id="editor_bbcode_flag" type="hidden">
+
+
+
+<div id="editor_main"><div class="clearfix" id="editor_wrapper"><div id="bbcode_emotions"><h5>表情图标</h5><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_biggrin.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_smile.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_sad.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_surprised.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_eek.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_confused.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_cool.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_lol.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_mad.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_razz.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_redface.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_cry.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_evil.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_twisted.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_rolleyes.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_wink.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_exclaim.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_question.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_idea.gif"><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_arrow.gif"></div><div id="bbcode_controllers"><div id="bbcode_toolbar"><input id="button_bold" value="B" type="button"><input id="button_italic" value="I" type="button"><input id="button_underline" value="U" type="button"><input value="Quote" type="button"><input value="Code" type="button"><input value="List" type="button"><input value="Img" type="button"><input value="URL" type="button"><input value="Flash" type="button"><input value="Table" type="button"><br>字体颜色: <select id="select_color"><option selected="selected" value="black" style="color: black;">标准</option><option value="darkred" style="color: darkred;">深红</option><option value="red" style="color: red;">红色</option><option value="orange" style="color: orange;">橙色</option><option value="brown" style="color: brown;">棕色</option><option value="yellow" style="color: yellow;">黄色</option><option value="green" style="color: green;">绿色</option><option value="olive" style="color: olive;">橄榄</option><option value="cyan" style="color: cyan;">青色</option><option value="blue" style="color: blue;">蓝色</option><option value="darkblue" style="color: darkblue;">深蓝</option><option value="indigo" style="color: indigo;">靛蓝</option><option value="violet" style="color: violet;">紫色</option><option value="gray" style="color: gray;">灰色</option><option value="white" style="color: white;">白色</option><option value="black" style="color: black;">黑色</option></select>&nbsp;字体大小: <select id="select_font"><option selected="selected" value="0">标准</option><option value="xx-small">1 (xx-small)</option><option value="x-small">2 (x-small)</option><option value="small">3 (small)</option><option value="medium">4 (medium)</option><option value="large">5 (large)</option><option value="x-large">6 (x-large)</option><option value="xx-large">7 (xx-large)</option></select>&nbsp;对齐: <select id="select_align"><option selected="selected" value="0">标准</option><option value="left">居左</option><option value="center">居中</option><option value="right">居右</option></select></div><div id="bbcode_tooltip">提示：选择您需要装饰的文字, 按上列按钮即可添加上相应的标签</div><textarea class="validate-richeditor bad-words min-length-5" cols="40" id="editor_body" name="comment[body]" rows="20" style="width: 500px; height: 350px;"></textarea></div></div></div>
+
+
+<script type="text/javascript">
+  var editor = new Control.TextArea.Editor("editor_body", "bbcode", false);
+</script>
+
+          <p style="text-align:right;margin-right:30px;">(快捷键 Alt+S / Ctrl+Enter) <input class="submit" id="quick_reply_button" name="commit" value="提交" type="submit"></p>
+       </form>
+        <script type="text/javascript">
+          new HotKey("s",function() {$('quick_reply_button').click();},{altKey: true, ctrlKey: false});
+          new HotKey(new Number(13),function() {$('quick_reply_button').click();},{altKey: false, ctrlKey: true});
+
+          new Validation("comment_form", {immediate: false, onFormValidate: function(result, form){
+            if(result) {
+              new Ajax.Request('/blog/create_comment/1830321', {
+                onFailure:function(response){
+                  $('comments').insert({after:response.responseText})
+                  form.spinner.hide();
+                  Element.scrollTo($('comments'));
+                },
+                onSuccess:function(response){
+                  Element.scrollTo($('comments'));
+                  var new_comment = new Element('div', {}).update(response.responseText).firstChild;
+                  var comment_id = new_comment.readAttribute('id');
+
+                  $('comments').insert({after:response.responseText});
+                  $('editor_body').value = "";
+
+                  var css_rules = '#' + comment_id + ' pre';
+                  highlightNewAddContent(css_rules);
+                  processComment();
+                  code_favorites_init(css_rules);
+                  
+                  form.spinner.hide();
+                }, parameters:Form.serialize(form)
+              });
+            }
+        }});
+        </script>
+        </div>
+</div>
+
+
+<script type="text/javascript">
+  dp.SyntaxHighlighter.HighlightAll('code', true, true);
+
+  $$('#main .blog_content pre[name=code]').each(function(pre, index){ // blog content
+    var post_id = 1830321;
+    var location = window.location;
+    source_url = location.protocol + "//" + location.host + location.pathname + location.search;
+    pre.writeAttribute('codeable_id', post_id);
+    pre.writeAttribute('codeable_type', "Blog");
+    pre.writeAttribute('source_url', source_url);
+    pre.writeAttribute('pre_index', index);
+    pre.writeAttribute('title', 'Android NDK开发之Jni调用Java对象');
+  });
+
+  fix_image_size($$('div.blog_content img'), 700);
+
+  function processComment() {
+    $$('#main .blog_comment > div').each(function(comment){// comment
+      var post_id = comment.id.substr(2);
+      $$("#"+comment.id+" pre[name=code]").each(function(pre, index){
+        var location = window.location;
+        source_url = location.protocol + "//" + location.host + location.pathname + location.search;
+        source_url += "#" + comment.id;
+        pre.writeAttribute('codeable_id', post_id);
+        pre.writeAttribute('codeable_type', "BlogComment");
+        pre.writeAttribute('source_url', source_url);
+        pre.writeAttribute('pre_index', index);
+        pre.writeAttribute('title', 'Android NDK开发之Jni调用Java对象');
+      });
+    });
+  }
+
+  function quote_comment(id) {
+    new Ajax.Request('/editor/quote', {
+      parameters: {'id':id, 'type':'BlogComment'},
+      onSuccess:function(response){editor.bbcode_editor.textarea.insertAfterSelection(response.responseText);
+        Element.scrollTo(editor.bbcode_editor.textarea.element);}
+    });
+  }
+
+  code_favorites_init();
+  processComment();
+  new WeiboShare({share_buttons: $('share_weibo'), img_scope: $('blog_content')});
+</script>
+
+
+
+
+        </div>
+
+        <div id="local">
+          <div class="local_top"></div>
+          <div id="blog_owner">
+  <div id="blog_owner_logo"><a href="http://zhiweiofli.iteye.com/"><img alt="zhiweiofli的博客" class="logo" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/c67250e0-9a09-39e9-bce4-d03006c4cc0d.jpg" title="zhiweiofli的博客: 80后Programer---&gt;zhiweiofli" width=""></a></div>
+  <div id="blog_owner_name">zhiweiofli</div>
+</div>
+
+          <div id="blog_actions">
+            <ul>
+              <li>浏览: 209427 次</li>
+              <li>性别: <img alt="Icon_minigender_1" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/icon_minigender_1.gif" title="男"></li>
+              <li>来自: 广州</li>
+              <li><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/offline.gif"></li>
+              
+                <li>
+                  <a href="http://my.iteye.com/messages/new?message%5Breceiver_name%5D=zhiweiofli" class="message" title="发送站内短信">发短消息</a>
+                  
+                    <a href="http://my.iteye.com/feed?subscription%5Bsubscribed_user_name%5D=zhiweiofli" class="subscription" onclick="var f = document.createElement('form'); f.style.display = 'none'; this.parentNode.appendChild(f); f.method = 'POST'; f.action = this.href;var s = document.createElement('input'); s.setAttribute('type', 'hidden'); s.setAttribute('name', 'authenticity_token'); s.setAttribute('value', '6LBnfgtCT4QAivyyl5VjdJ5t4Tj0q+zA8a+MYcdWHd0='); f.appendChild(s);f.submit();return false;">关注</a>
+                  
+                </li>
+              
+            </ul>
+          </div>
+          <div id="user_visits" class="clearfix">
+            <h5>最近访客 <span style="font-weight:normal;font-size:12px;padding-left:30px;"><a href="http://zhiweiofli.iteye.com/blog/user_visits">更多访客&gt;&gt;</a></span></h5>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://rainbow954.iteye.com/" target="_blank"><img alt="rainbow954的博客" class="logo" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/user-logo-thumb.gif" title="rainbow954的博客: " width="48px"></a></div>
+                <div class="left"><a href="http://rainbow954.iteye.com/" target="_blank" title="rainbow954">rainbow954</a></div>
+              </div>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://zhayh.iteye.com/" target="_blank"><img alt="zhayh的博客" class="logo" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/user-logo-thumb.gif" title="zhayh的博客: " width="48px"></a></div>
+                <div class="left"><a href="http://zhayh.iteye.com/" target="_blank" title="zhayh">zhayh</a></div>
+              </div>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://fyzhou76.iteye.com/" target="_blank"><img alt="fyzhou76的博客" class="logo" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/user-logo-thumb.gif" title="fyzhou76的博客: " width="48px"></a></div>
+                <div class="left"><a href="http://fyzhou76.iteye.com/" target="_blank" title="fyzhou76">fyzhou76</a></div>
+              </div>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://mayi114.iteye.com/" target="_blank"><img alt="mayi114的博客" class="logo" src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/user-logo-thumb.gif" title="mayi114的博客: " width="48px"></a></div>
+                <div class="left"><a href="http://mayi114.iteye.com/" target="_blank" title="mayi114">mayi114</a></div>
+              </div>
+            
+          </div>
+
+          
+
+                      <div id="blog_menu">
+              <h5>文章分类</h5>
+              <ul>
+                <li><a href="http://zhiweiofli.iteye.com/">全部博客 (65)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/138152">Android那些事儿 (40)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/143854">小小的Java撑起大大的Program (10)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/146064">不仅是好看而已--Flex (3)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/146065">Hibernate之旅 (7)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/146066">SQL技巧 (3)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/146067">杂文记事 (1)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/226364">强大的python (0)</a></li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/category/264564">NodeJs (2)</a></li>
+                
+              </ul>
+            </div>
+            <div id="month_blogs">
+              <h5>社区版块</h5>
+              <ul>
+                <li><a href="http://zhiweiofli.iteye.com/blog/news">我的资讯</a> (0)</li>
+                <li>
+                  <a href="http://zhiweiofli.iteye.com/blog/post">我的论坛</a> (2)
+                </li>
+                <li><a href="http://zhiweiofli.iteye.com/blog/answered_problems">我的问答</a> (4)</li>
+              </ul>
+            </div>
+            <div id="month_blogs">
+              <h5>存档分类</h5>
+              <ul>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/blog/monthblog/2014-05">2014-05</a> (1)</li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/blog/monthblog/2014-04">2014-04</a> (2)</li>
+                
+                  <li><a href="http://zhiweiofli.iteye.com/blog/monthblog/2014-03">2014-03</a> (2)</li>
+                
+                <li><a href="http://zhiweiofli.iteye.com/blog/monthblog_more">更多存档...</a></li>
+              </ul>
+            </div>
+            
+            
+
+            <div id="guest_books">
+              <h5>最新评论</h5>
+              <ul>
+                
+                <li>
+                  <a href="http://alextech.iteye.com/" target="_blank" title="AlexTech">AlexTech</a>： 
+                  谢谢，解决了我大问题<br>
+                  <a href="http://zhiweiofli.iteye.com/blog/1539467#bc2357439">android异常：Can not perform this action after onSaveInstanc</a>
+                </li>
+                
+                <li>
+                  <a href="http://tao-taobujue.iteye.com/" target="_blank" title="Tao_taobujue">Tao_taobujue</a>： 
+                  &lt;div class="quote_title ...<br>
+                  <a href="http://zhiweiofli.iteye.com/blog/1539467#bc2346578">android异常：Can not perform this action after onSaveInstanc</a>
+                </li>
+                
+                <li>
+                  <a href="http://dirweb1987.iteye.com/" target="_blank" title="dirweb1987">dirweb1987</a>： 
+                  [img][list][*]引用[u][i][b][/b][/ ...<br>
+                  <a href="http://zhiweiofli.iteye.com/blog/1830318#bc2342677">Android NDK开发之Jni的数据类型</a>
+                </li>
+                
+                <li>
+                  <a href="http://zhouujianghui.iteye.com/" target="_blank" title="芦茨法">芦茨法</a>： 
+                  &lt;div class="quote_title ...<br>
+                  <a href="http://zhiweiofli.iteye.com/blog/1539467#bc2334725">android异常：Can not perform this action after onSaveInstanc</a>
+                </li>
+                
+                <li>
+                  <a href="http://zhouujianghui.iteye.com/" target="_blank" title="芦茨法">芦茨法</a>： 
+                  我也有碰到这个问题，我的解决方案是在父容器Activity与了 ...<br>
+                  <a href="http://zhiweiofli.iteye.com/blog/1539467#bc2334723">android异常：Can not perform this action after onSaveInstanc</a>
+                </li>
+                
+              </ul>
+            </div>
+
+            <div class="local_bottom"></div>
+          
+        </div>
+      </div>
+
+      <div id="footer" class="clearfix">
+        <div id="copyright">
+          <hr>
+          声明：ITeye文章版权属于作者，受法律保护。没有作者书面许可不得转载。若作者同意转载，必须以超链接形式标明文章原始出处和作者。<br>
+          © 2003-2015 ITeye.com.   All rights reserved.  [ 京ICP证110151号  京公网安备110105010620 ]
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript">
+  document.write("<img src='http://stat.iteye.com/?url="+ encodeURIComponent(document.location.href) + "&referrer=" + encodeURIComponent(document.referrer) + "&user_id=134762' width='0' height='0' />");
+</script><img src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/a.gif" height="0" width="0">
+
+<script src="Android%20NDK%E5%BC%80%E5%8F%91%E4%B9%8BJni%E8%B0%83%E7%94%A8Java%E5%AF%B9%E8%B1%A1%20-%2080%E5%90%8EProgramer---%3Ezhiweiofli%20-%20ITeye%E6%8A%80%E6%9C%AF%E7%BD%91%E7%AB%99_files/tracking.js" type="text/javascript"></script>
+
+    
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-39322849-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+      
+    
+  
+
+</body></html>

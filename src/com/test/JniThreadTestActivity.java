@@ -17,6 +17,7 @@ public class JniThreadTestActivity extends Activity {
 	private TextView msgTxt;
 	private EditText editTxt;
 	private int threadNo=0;
+	ThreadNumber r= new ThreadNumber();
 	private long start;
 	private static int threadCount=0;
 	static{
@@ -27,7 +28,7 @@ public class JniThreadTestActivity extends Activity {
 		public void handleMessage(Message msg) {  
 			 mybtn.setEnabled(true);
 			 msgTxt.setVisibility(View.VISIBLE);
-	    	 msgTxt.setText("执行完成，共花费："+(System.currentTimeMillis() - start)+"ms");	
+	    	 msgTxt.setText("执行完成，共花费："+(System.currentTimeMillis() - start)+"ms" + " total:"+r.getNumber());	
 		}  
 
 	};
@@ -61,7 +62,8 @@ public class JniThreadTestActivity extends Activity {
             	}
             	mybtn.setEnabled(false);
             	start = System.currentTimeMillis();
-                mainThread(threadNo);
+            	r.setNumber(threadNo);
+                mainThread(r);
                 while(true){
                 	if(threadCount ==threadNo){
                 		myHanlder.sendEmptyMessage(0);
@@ -86,6 +88,7 @@ public class JniThreadTestActivity extends Activity {
 //       	 myHanlder.sendEmptyMessage(0);
 //        }
     }
-    private native void mainThread(int num);
+    private native void mainThread1(int num);
+    private native void mainThread(ThreadNumber num);
     private native void setJNIEnv();
 }
